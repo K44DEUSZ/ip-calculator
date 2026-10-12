@@ -44,6 +44,17 @@ const manifest = JSON.parse(fs.readFileSync("package.json", "utf8"));
 if (manifest.name !== "@k44deusz/" + repository.split("/")[1] || manifest.license !== "MIT")
   throw new Error("Unexpected package ownership or license");
 const latest = await request("/releases/latest");
+if (latest) {
+  if (!/^[a-f0-9]{40}$/.test(latest.target_commitish || ""))
+    throw new Error("Expected an exact published source revision");
+  const changed = git("diff", "--name-only", latest.target_commitish, "HEAD")
+    .split(/\r?\n/)
+    .filter(Boolean);
+  if (changed.every((file) => file.startsWith(".github/") || file === "scripts/release.mjs")) {
+    console.log("Only release automation changed; the published package remains current.");
+    process.exit(0);
+  }
+}
 const pattern = /^(?:v)?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 const proposed = pattern.exec(manifest.version),
   previous = latest ? pattern.exec(latest.tag_name) : null;
@@ -58,14 +69,23 @@ if (previous) {
   if (comparison === 0) version = previous[1] + "." + previous[2] + "." + (Number(previous[3]) + 1);
 }
 if (version !== manifest.version) {
+  if (
+    process.env.GITHUB_REPOSITORY_OWNER !== "K44DEUSZ" ||
+    !/^[1-9]\d*$/.test(process.env.GITHUB_REPOSITORY_OWNER_ID || "")
+  )
+    throw new Error("Expected the verified repository owner identity");
   manifest.version = version;
   fs.writeFileSync("package.json", JSON.stringify(manifest, null, 2) + "\n");
   const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"));
   lock.version = version;
   lock.packages[""].version = version;
   fs.writeFileSync("package-lock.json", JSON.stringify(lock, null, 2) + "\n");
-  git("config", "user.name", "github-actions[bot]");
-  git("config", "user.email", "41898282+github-actions[bot]@users.noreply.github.com");
+  git("config", "user.name", "Bartosz Golat");
+  git(
+    "config",
+    "user.email",
+    process.env.GITHUB_REPOSITORY_OWNER_ID + "+K44DEUSZ@users.noreply.github.com",
+  );
   git("add", "package.json", "package-lock.json");
   git("commit", "-m", "Podniesienie wersji biblioteki do " + version);
   git("push", "origin", "HEAD:main");
