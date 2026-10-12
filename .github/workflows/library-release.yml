@@ -2,6 +2,14 @@ name: Reusable library checks and release
 on:
   workflow_call:
     inputs:
+      publish:
+        required: false
+        type: boolean
+        default: false
+      release_version:
+        required: false
+        type: string
+        default: ""
       helper_revision:
         required: true
         type: string
@@ -32,7 +40,7 @@ jobs:
       - run: npm audit --audit-level=high
   release:
     needs: check
-    if: github.repository_owner == 'K44DEUSZ' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: github.repository_owner == 'K44DEUSZ' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.publish
     permissions:
       contents: write
     runs-on: ubuntu-22.04
@@ -49,7 +57,7 @@ jobs:
         run: test "${#HELPER_REVISION}" = 40 && [[ "$HELPER_REVISION" =~ ^[a-f0-9]+$ ]]
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          repository: K44DEUSZ/ip-utils
+          repository: K44DEUSZ/ip-calculator
           ref: ${{ inputs.helper_revision }}
           path: .workflow
           persist-credentials: false
@@ -62,6 +70,7 @@ jobs:
         run: node .workflow/scripts/release.mjs
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ inputs.release_version }}
   notify:
     needs: release
     if: needs.release.outputs.tag != '' && inputs.app_id != ''

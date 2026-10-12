@@ -5,6 +5,15 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the checked version from package.json
+        type: boolean
+        default: false
+      version:
+        description: Exact version from package.json; required for publication
+        type: string
+        default: ""
 permissions:
   contents: write
 concurrency:
@@ -14,6 +23,8 @@ jobs:
   library:
     uses: ./.github/workflows/library-release.yml
     with:
+      publish: ${{ github.event_name == 'workflow_dispatch' && inputs.publish }}
+      release_version: ${{ inputs.version || '' }}
       helper_revision: ${{ github.sha }}
       app_id: ${{ vars.LIBRARY_DISPATCH_APP_ID }}
     secrets:

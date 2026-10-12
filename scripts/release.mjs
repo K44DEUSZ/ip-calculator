@@ -4,12 +4,12 @@ import { execFileSync } from "node:child_process";
 const repository = process.env.GITHUB_REPOSITORY;
 if (
   ![
-    "ip-utils",
+    "ip-calculator",
     "password-generator",
-    "number-utils",
-    "color-utils",
+    "base-converter",
+    "color-converter",
     "favicon-generator",
-    "image-utils",
+    "image-converter",
   ]
     .map((name) => "K44DEUSZ/" + name)
     .includes(repository) ||
@@ -43,60 +43,24 @@ if (git("rev-parse", "HEAD") !== git("rev-parse", "origin/main")) {
 const manifest = JSON.parse(fs.readFileSync("package.json", "utf8"));
 if (manifest.name !== "@k44deusz/" + repository.split("/")[1] || manifest.license !== "MIT")
   throw new Error("Unexpected package ownership or license");
+const version = process.env.RELEASE_VERSION;
+if (
+  !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version || "") ||
+  version !== manifest.version
+)
+  throw new Error("Choose the exact stable version already saved in package.json");
 const latest = await request("/releases/latest");
 if (latest) {
   if (!/^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(latest.tag_name || ""))
     throw new Error("Expected a stable published source tag");
-  const publishedRevision = git(
-    "rev-parse",
-    "--verify",
-    "refs/tags/" + latest.tag_name + "^{commit}",
-  );
-  if (!/^[a-f0-9]{40}$/.test(publishedRevision))
-    throw new Error("Expected an exact published source revision");
-  const changed = git("diff", "--name-only", publishedRevision, "HEAD")
-    .split(/\r?\n/)
-    .filter(Boolean);
-  if (changed.every((file) => file.startsWith(".github/") || file === "scripts/release.mjs")) {
-    console.log("Only release automation changed; the published package remains current.");
-    process.exit(0);
-  }
-}
-const pattern = /^(?:v)?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
-const proposed = pattern.exec(manifest.version),
-  previous = latest ? pattern.exec(latest.tag_name) : null;
-if (!proposed || (latest && !previous)) throw new Error("Expected stable semantic versions");
-let version = manifest.version;
-if (previous) {
   const comparison =
-    [1, 2, 3]
-      .map((index) => Number(proposed[index]) - Number(previous[index]))
+    version
+      .split(".")
+      .map((value, index) => Number(value) - Number(latest.tag_name.slice(1).split(".")[index]))
       .find((value) => value !== 0) ?? 0;
-  if (comparison < 0) throw new Error("Package version is older than its latest release");
-  if (comparison === 0) version = previous[1] + "." + previous[2] + "." + (Number(previous[3]) + 1);
+  if (comparison <= 0) throw new Error("Published versions cannot be replaced or downgraded");
 }
-if (version !== manifest.version) {
-  if (
-    process.env.GITHUB_REPOSITORY_OWNER !== "K44DEUSZ" ||
-    !/^[1-9]\d*$/.test(process.env.GITHUB_REPOSITORY_OWNER_ID || "")
-  )
-    throw new Error("Expected the verified repository owner identity");
-  manifest.version = version;
-  fs.writeFileSync("package.json", JSON.stringify(manifest, null, 2) + "\n");
-  const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"));
-  lock.version = version;
-  lock.packages[""].version = version;
-  fs.writeFileSync("package-lock.json", JSON.stringify(lock, null, 2) + "\n");
-  git("config", "user.name", "Bartosz Golat");
-  git(
-    "config",
-    "user.email",
-    process.env.GITHUB_REPOSITORY_OWNER_ID + "+K44DEUSZ@users.noreply.github.com",
-  );
-  git("add", "package.json", "package-lock.json");
-  git("commit", "-m", "Podniesienie wersji biblioteki do " + version);
-  git("push", "origin", "HEAD:main");
-}
+if (git("tag", "--list", "v" + version)) throw new Error("The source tag already exists");
 execFileSync("npm", ["run", "build"], { stdio: "inherit" });
 const packages = JSON.parse(execFileSync("npm", ["pack", "--json"], { encoding: "utf8" }));
 const archive = packages[0].filename;

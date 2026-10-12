@@ -1,6 +1,6 @@
 {
-  "name": "@k44deusz/ip-utils",
-  "version": "1.0.1",
+  "name": "@k44deusz/ip-calculator",
+  "version": "1.0.0",
   "description": "Obliczanie podsieci IPv4 i IPv6, formatowanie adresów oraz mapowanie IPv4 na IPv6.",
   "type": "module",
   "exports": {
@@ -25,10 +25,10 @@
   "author": "Bartosz Golat",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/K44DEUSZ/ip-utils.git"
+    "url": "git+https://github.com/K44DEUSZ/ip-calculator.git"
   },
   "bugs": {
-    "url": "https://github.com/K44DEUSZ/ip-utils/issues"
+    "url": "https://github.com/K44DEUSZ/ip-calculator/issues"
   },
   "scripts": {
     "build": "tsc",

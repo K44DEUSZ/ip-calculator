@@ -1,4 +1,4 @@
-# ip-utils
+# ip-calculator
 
 [Wersja polska](README.md)
 
@@ -6,14 +6,14 @@ This library calculates IPv4 and IPv6 subnet parameters: the network address, ma
 
 ## Usage
 
-Download the package for your chosen version from [Releases](https://github.com/K44DEUSZ/ip-utils/releases), then install it in your project:
+Download the package for your chosen version from [Releases](https://github.com/K44DEUSZ/ip-calculator/releases), then install it in your project:
 
 ```sh
-npm install ./k44deusz-ip-utils-1.0.0.tgz
+npm install ./k44deusz-ip-calculator-1.0.0.tgz
 ```
 
 ```ts
-import { calculateSubnet, formatAddress } from "@k44deusz/ip-utils";
+import { calculateSubnet, formatAddress } from "@k44deusz/ip-calculator";
 
 const subnet = calculateSubnet("192.168.1.42", "24", 4);
 formatAddress(subnet.network, 4); // "192.168.1.0"
@@ -38,7 +38,7 @@ npm run check
 npm test
 ```
 
-A successful check of changes on `main` publishes a release. If the version already exists, automation increments its patch number and commits the change. Packages are available on GitHub; an npm-registry account is not required.
+A push to `main` runs checks and tests. Releases are published separately through GitHub Actions, using the version saved in `package.json`. Automation does not change that version or overwrite an existing release. A published release updates the dependency used by the website after its checks pass.
 
 ## License
 
