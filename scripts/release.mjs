@@ -45,9 +45,16 @@ if (manifest.name !== "@k44deusz/" + repository.split("/")[1] || manifest.licens
   throw new Error("Unexpected package ownership or license");
 const latest = await request("/releases/latest");
 if (latest) {
-  if (!/^[a-f0-9]{40}$/.test(latest.target_commitish || ""))
+  if (!/^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(latest.tag_name || ""))
+    throw new Error("Expected a stable published source tag");
+  const publishedRevision = git(
+    "rev-parse",
+    "--verify",
+    "refs/tags/" + latest.tag_name + "^{commit}",
+  );
+  if (!/^[a-f0-9]{40}$/.test(publishedRevision))
     throw new Error("Expected an exact published source revision");
-  const changed = git("diff", "--name-only", latest.target_commitish, "HEAD")
+  const changed = git("diff", "--name-only", publishedRevision, "HEAD")
     .split(/\r?\n/)
     .filter(Boolean);
   if (changed.every((file) => file.startsWith(".github/") || file === "scripts/release.mjs")) {
