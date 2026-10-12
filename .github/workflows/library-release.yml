@@ -1,0 +1,84 @@
+name: Reusable library checks and release
+on:
+  workflow_call:
+    inputs:
+      helper_revision:
+        required: true
+        type: string
+      app_id:
+        required: false
+        type: string
+        default: ""
+    secrets:
+      app_private_key:
+        required: false
+permissions:
+  contents: read
+jobs:
+  check:
+    permissions:
+      contents: read
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run check
+      - run: npm test
+      - run: npm audit --audit-level=high
+  release:
+    needs: check
+    if: github.repository_owner == 'K44DEUSZ' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    permissions:
+      contents: write
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    outputs:
+      tag: ${{ steps.publish.outputs.tag }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+      - name: Validate the shared release helper revision
+        env:
+          HELPER_REVISION: ${{ inputs.helper_revision }}
+        run: test "${#HELPER_REVISION}" = 40 && [[ "$HELPER_REVISION" =~ ^[a-f0-9]+$ ]]
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: K44DEUSZ/ip-utils
+          ref: ${{ inputs.helper_revision }}
+          path: .workflow
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - id: publish
+        run: node .workflow/scripts/release.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+  notify:
+    needs: release
+    if: needs.release.outputs.tag != '' && inputs.app_id != ''
+    permissions:
+      contents: read
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
+        with:
+          app-id: ${{ inputs.app_id }}
+          private-key: ${{ secrets.app_private_key }}
+          owner: K44DEUSZ
+          repositories: kaadeusz.pl
+          permission-actions: write
+      - name: Update the Tools dependency
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: gh api --method POST repos/K44DEUSZ/kaadeusz.pl/actions/workflows/sync-public-libraries.yml/dispatches -f ref=main -f "inputs[library]=${GITHUB_REPOSITORY#K44DEUSZ/}"

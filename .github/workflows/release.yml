@@ -6,61 +6,15 @@ on:
     branches: [main]
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 concurrency:
   group: library-${{ github.ref }}
   cancel-in-progress: false
 jobs:
-  check:
-    runs-on: ubuntu-22.04
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
-        with:
-          node-version: "24"
-          cache: npm
-      - run: npm ci
-      - run: npm run check
-      - run: npm test
-      - run: npm audit --audit-level=high
-  release:
-    needs: check
-    if: github.repository_owner == 'K44DEUSZ' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    permissions:
-      contents: write
-    runs-on: ubuntu-22.04
-    timeout-minutes: 10
-    outputs:
-      tag: ${{ steps.publish.outputs.tag }}
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
-        with:
-          node-version: "24"
-          cache: npm
-      - run: npm ci
-      - id: publish
-        run: node scripts/release.mjs
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-  notify:
-    needs: release
-    if: needs.release.outputs.tag != '' && vars.LIBRARY_DISPATCH_APP_ID != ''
-    runs-on: ubuntu-22.04
-    timeout-minutes: 5
-    steps:
-      - id: app-token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
-        with:
-          app-id: ${{ vars.LIBRARY_DISPATCH_APP_ID }}
-          private-key: ${{ secrets.LIBRARY_DISPATCH_APP_PRIVATE_KEY }}
-          owner: K44DEUSZ
-          repositories: kaadeusz.pl
-          permission-actions: write
-      - name: Update the Tools dependency
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: gh api --method POST repos/K44DEUSZ/kaadeusz.pl/actions/workflows/sync-public-libraries.yml/dispatches -f ref=main -f inputs[library]=ip-utils
+  library:
+    uses: ./.github/workflows/library-release.yml
+    with:
+      helper_revision: ${{ github.sha }}
+      app_id: ${{ vars.LIBRARY_DISPATCH_APP_ID }}
+    secrets:
+      app_private_key: ${{ secrets.LIBRARY_DISPATCH_APP_PRIVATE_KEY }}

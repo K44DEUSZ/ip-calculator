@@ -1,7 +1,7 @@
 {
   "name": "@k44deusz/ip-utils",
   "version": "1.0.0",
-  "description": "Dependency-free IPv4/IPv6 parsing, formatting, subnet calculations and mapping.",
+  "description": "Obliczanie podsieci IPv4 i IPv6, formatowanie adresów oraz mapowanie IPv4 na IPv6.",
   "type": "module",
   "exports": {
     ".": {
@@ -15,7 +15,8 @@
   "files": [
     "dist",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "README.en.md"
   ],
   "engines": {
     "node": ">=20"

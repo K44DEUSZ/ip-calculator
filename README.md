@@ -1,20 +1,16 @@
 # ip-utils
 
-Dependency-free IPv4/IPv6 parsing, formatting, subnet calculations and mapping.
+[English version](README.en.md)
 
-Independent TypeScript source, ESM JavaScript releases and generated type declarations. No React, Next.js, runtime dependencies, UI or private application configuration.
+Ta biblioteka oblicza parametry podsieci IPv4 i IPv6: adres sieci, maskę, zakres i liczbę adresów. Możesz też skracać zapis IPv6 i mapować IPv4 na IPv6. Obliczenia korzystają z `bigint`, więc nie tracą precyzji na dużych adresach.
 
-## Installation
+## Jak użyć
 
-Download a versioned package from [Releases](https://github.com/K44DEUSZ/ip-utils/releases), then install it:
+Pobierz paczkę wybranego wydania z [Releases](https://github.com/K44DEUSZ/ip-utils/releases), a następnie zainstaluj ją w swoim projekcie:
 
 ```sh
 npm install ./k44deusz-ip-utils-1.0.0.tgz
 ```
-
-Packages are distributed as GitHub release assets; no npm-registry publication is implied.
-
-## Usage
 
 ```ts
 import { calculateSubnet, formatAddress } from "@k44deusz/ip-utils";
@@ -24,17 +20,17 @@ formatAddress(subnet.network, 4); // "192.168.1.0"
 subnet.hosts; // 254n
 ```
 
-## Contract
+## Co warto wiedzieć
 
-The public API exports `parseAddress`, `formatAddress`, `parsePrefix`, `calculateSubnet`, `mapIpv4ToIpv6`, `extractMappedIpv4`, `classifyAddress`, and `IpError`. Values use `bigint`, so they are exact for both address families. Formatters validate the family and numeric range. IPv6 output compresses the longest zero run, preferring the first on ties, and uses dotted notation for IPv4-mapped addresses.
+`parseAddress` zamienia tekst na liczbę, `formatAddress` wykonuje operację odwrotną, a `parsePrefix` odczytuje CIDR lub maskę IPv4. `calculateSubnet` zwraca parametry sieci i zapis bitowy. Do mapowania służą `mapIpv4ToIpv6` i `extractMappedIpv4`.
 
-IPv4 /31 and /32 have no conventional broadcast in this API; /31 exposes both addresses as usable endpoints. IPv6 does not report an IPv4-style host count or broadcast. `classifyAddress` describes selected familiar ranges; it is not a complete IANA registry, routability check or security filter. Zone identifiers and URI brackets are not accepted.
+Dla IPv4 `/31` i `/32` wynik nie zawiera zwykłego adresu broadcast; `/31` udostępnia oba adresy jako końce połączenia. IPv6 nie dostaje liczby hostów ani broadcastu w znaczeniu IPv4.
 
-`IpError.code` is stable and independent of human-language translations. Codes: `invalid_version`, `address_too_long`, `invalid_ipv4`, `invalid_ipv6`, `invalid_mask`, `invalid_prefix`, `address_out_of_range`. Non-string/non-bigint argument types raise `TypeError`.
+`classifyAddress` rozpoznaje wybrane znane zakresy, np. prywatne i dokumentacyjne. Nie używaj tej funkcji jako filtra bezpieczeństwa lub pełnej oceny routowalności. Parser nie przyjmuje identyfikatorów strefy ani nawiasów używanych w URL. Błędy mają typ `IpError` i pole `code`, które możesz przetłumaczyć w swoim interfejsie.
 
-## Development
+## Praca z kodem
 
-Use Node.js 24 for development and CI.
+Do pracy nad biblioteką użyj Node.js 24. Kod jest w TypeScript; wydania zawierają JavaScript ESM i deklaracje typów.
 
 ```sh
 npm ci
@@ -42,8 +38,8 @@ npm run check
 npm test
 ```
 
-A successful push to main creates a tested versioned release. If the package version already exists, the release workflow increments its patch version and commits that metadata. Explicit higher versions are preserved. Release artifacts include compiled JavaScript, declarations and this license.
+Po poprawnym sprawdzeniu zmian na `main` automat publikuje wydanie. Jeśli numer już istnieje, zwiększa ostatnią część wersji i zapisuje tę zmianę w Git. Paczki są dostępne na GitHubie; nie wymagają konta w rejestrze npm.
 
-## License
+## Licencja
 
 MIT. Copyright 2026 Bartosz Golat.

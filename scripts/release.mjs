@@ -3,7 +3,16 @@ import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 const repository = process.env.GITHUB_REPOSITORY;
 if (
-  !["K44DEUSZ/ip-utils", "K44DEUSZ/password-generator"].includes(repository) ||
+  ![
+    "ip-utils",
+    "password-generator",
+    "number-utils",
+    "color-utils",
+    "favicon-generator",
+    "image-utils",
+  ]
+    .map((name) => "K44DEUSZ/" + name)
+    .includes(repository) ||
   process.env.GITHUB_REF !== "refs/heads/main"
 )
   throw new Error("Unexpected release repository or branch");
@@ -32,6 +41,8 @@ if (git("rev-parse", "HEAD") !== git("rev-parse", "origin/main")) {
   process.exit(0);
 }
 const manifest = JSON.parse(fs.readFileSync("package.json", "utf8"));
+if (manifest.name !== "@k44deusz/" + repository.split("/")[1] || manifest.license !== "MIT")
+  throw new Error("Unexpected package ownership or license");
 const latest = await request("/releases/latest");
 const pattern = /^(?:v)?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 const proposed = pattern.exec(manifest.version),
