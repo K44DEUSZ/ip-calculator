@@ -4,12 +4,14 @@
 
 This library calculates IPv4 and IPv6 subnet parameters: the network address, mask, range and address count. It also formats IPv6 addresses and maps IPv4 to IPv6. Calculations use `bigint` to preserve the full address value.
 
+The current changes remain at version 1.0.0 and are not a new release. The public 1.0.0 archive is not overwritten; the additions below describe the current repository source. To try them before publication, run `npm ci`, `npm run build`, `npm pack`, and install the resulting file locally. The changelog stays in the repository and is excluded from the package.
+
 ## Usage
 
 Download the package for your chosen version from [Releases](https://github.com/K44DEUSZ/ip-calculator/releases), then install it in your project:
 
 ```sh
-npm install ./k44deusz-ip-calculator-1.0.1.tgz
+npm install ./k44deusz-ip-calculator-1.0.0.tgz
 ```
 
 ```ts

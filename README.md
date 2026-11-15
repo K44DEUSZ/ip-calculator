@@ -4,12 +4,14 @@
 
 Ta biblioteka oblicza parametry podsieci IPv4 i IPv6: adres sieci, maskę, zakres i liczbę adresów. Możesz też skracać zapis IPv6 i mapować IPv4 na IPv6. Obliczenia korzystają z `bigint`, więc nie tracą precyzji na dużych adresach.
 
+Bieżące poprawki pozostają na wersji 1.0.0 i nie stanowią nowego wydania. Publiczna paczka 1.0.0 nie jest nadpisywana; nowe możliwości opisane poniżej dotyczą aktualnego kodu repozytorium. Aby je sprawdzić przed wydaniem, uruchom `npm ci`, `npm run build`, `npm pack` i zainstaluj uzyskany plik lokalnie. Changelog pozostaje w repozytorium i nie trafia do paczki.
+
 ## Jak użyć
 
 Pobierz paczkę wybranego wydania z [Releases](https://github.com/K44DEUSZ/ip-calculator/releases), a następnie zainstaluj ją w swoim projekcie:
 
 ```sh
-npm install ./k44deusz-ip-calculator-1.0.1.tgz
+npm install ./k44deusz-ip-calculator-1.0.0.tgz
 ```
 
 ```ts
