@@ -27,16 +27,29 @@ jobs:
     permissions:
       contents: read
     runs-on: ubuntu-22.04
-    timeout-minutes: 10
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 24]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
-          node-version: "24"
+          node-version: ${{ matrix.node }}
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run check
       - run: npm test
+      - run: npm run check:package
+      - name: Install the supported browser engines
+        if: matrix.node == 24 && hashFiles('scripts/browser-tests.mjs') != ''
+        run: npx --no-install playwright install --with-deps chromium firefox webkit
+      - name: Check behavior in real browsers
+        if: matrix.node == 24
+        run: npm run test:browser --if-present
+        env:
+          BROWSERS: chromium,firefox,webkit
       - run: npm audit --audit-level=high
   release:
     needs: check
@@ -65,6 +78,11 @@ jobs:
         with:
           node-version: "24"
           cache: npm
+      - name: Validate the Tools notification configuration before publication
+        run: node .workflow/scripts/check-notification-config.mjs
+        env:
+          LIBRARY_APP_ID: ${{ inputs.app_id }}
+          LIBRARY_APP_PRIVATE_KEY: ${{ secrets.app_private_key }}
       - run: npm ci --ignore-scripts
       - id: publish
         run: node .workflow/scripts/release.mjs

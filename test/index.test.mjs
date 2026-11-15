@@ -115,3 +115,117 @@ test("IPv4 mapping and selected range categories remain independent of translati
   ])
     assert.equal(classifyAddress(parseAddress(addressText, version), version), category);
 });
+
+test("all CIDR widths preserve exact subnet bounds and dotted-mask equivalence", () => {
+  for (const version of [4, 6]) {
+    const width = version === 4 ? 32 : 128;
+    const maximum = (1n << BigInt(width)) - 1n;
+    const addresses = [0n, 1n, maximum / 3n, maximum - 1n, maximum];
+    for (let prefix = 0; prefix <= width; prefix += 1) {
+      assert.equal(parsePrefix(`/${prefix}`, version), prefix);
+      const count = 1n << BigInt(width - prefix);
+      const mask = maximum - count + 1n;
+      if (version === 4) assert.equal(parsePrefix(formatAddress(mask, 4), 4), prefix);
+      for (const address of addresses) {
+        const subnet = calculateSubnet(formatAddress(address, version), String(prefix), version);
+        const network = address - (address % count);
+        assert.equal(subnet.network, network);
+        assert.equal(subnet.last, network + count - 1n);
+        assert.equal(subnet.last - subnet.network + 1n, subnet.count);
+        assert.ok(subnet.network <= address && address <= subnet.last);
+        assert.equal(subnet.mask, mask);
+        if (version === 4) {
+          assert.equal(subnet.hosts, prefix < 31 ? count - 2n : count);
+          assert.equal(subnet.broadcast, prefix < 31 ? subnet.last : null);
+          assert.equal(subnet.firstHost, prefix < 31 ? network + 1n : network);
+          assert.equal(subnet.lastHost, prefix < 31 ? subnet.last - 1n : subnet.last);
+        } else {
+          assert.equal(subnet.hosts, null);
+          assert.equal(subnet.broadcast, null);
+        }
+      }
+    }
+  }
+});
+
+test("deterministic addresses agree with the independent Node parser and mapping", () => {
+  let state = 123456789n;
+  for (const version of [4, 6]) {
+    const maximum = (1n << BigInt(version === 4 ? 32 : 128)) - 1n;
+    for (let index = 0; index < 256; index += 1) {
+      state = (state * 6364136223846793005n + 1442695040888963407n) & ((1n << 128n) - 1n);
+      const value = state & maximum;
+      for (const expanded of [false, true]) {
+        const text = formatAddress(value, version, expanded);
+        assert.equal(isIP(text), version);
+        assert.equal(parseAddress(text, version), value);
+      }
+      if (version === 4) assert.equal(extractMappedIpv4(mapIpv4ToIpv6(value)), value);
+    }
+  }
+  for (const text of [
+    "1:2:3:4:5:6:192.0.2.1",
+    "::192.0.2.1",
+    "2001:db8::192.0.2.1",
+    "1::",
+    "::1",
+    "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
+  ]) {
+    assert.equal(isIP(text), 6);
+    const value = parseAddress(text, 6);
+    assert.equal(parseAddress(formatAddress(value, 6), 6), value);
+  }
+});
+
+test("well-known range classifications include both boundary addresses only", () => {
+  for (const [version, start, end, category] of [
+    [4, "10.0.0.0", "10.255.255.255", "private"],
+    [4, "172.16.0.0", "172.31.255.255", "private"],
+    [4, "192.168.0.0", "192.168.255.255", "private"],
+    [4, "127.0.0.0", "127.255.255.255", "loopback"],
+    [4, "169.254.0.0", "169.254.255.255", "link_local"],
+    [4, "192.0.2.0", "192.0.2.255", "documentation"],
+    [4, "198.51.100.0", "198.51.100.255", "documentation"],
+    [4, "203.0.113.0", "203.0.113.255", "documentation"],
+    [4, "224.0.0.0", "239.255.255.255", "multicast"],
+    [6, "fc00::", "fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff", "unique_local"],
+    [6, "fe80::", "febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff", "link_local"],
+    [6, "2001:db8::", "2001:db8:ffff:ffff:ffff:ffff:ffff:ffff", "documentation"],
+    [6, "::ffff:0.0.0.0", "::ffff:255.255.255.255", "ipv4_mapped"],
+  ]) {
+    const first = parseAddress(start, version);
+    const last = parseAddress(end, version);
+    assert.equal(classifyAddress(first, version), category);
+    assert.equal(classifyAddress(last, version), category);
+    assert.notEqual(classifyAddress(first - 1n, version), category);
+    assert.notEqual(classifyAddress(last + 1n, version), category);
+  }
+  assert.equal(classifyAddress(parseAddress("ff00::", 6), 6), "multicast");
+  assert.equal(classifyAddress((1n << 128n) - 1n, 6), "multicast");
+});
+
+test("JavaScript type errors and malformed text retain stable public errors", () => {
+  for (const version of [4, 6]) {
+    for (const value of [null, undefined, 1, 1n, {}, []]) {
+      assert.throws(() => parseAddress(value, version), TypeError);
+      assert.throws(() => parsePrefix(value, version), TypeError);
+    }
+    for (const value of [null, undefined, 1, "1", {}, NaN]) {
+      assert.throws(() => formatAddress(value, version), TypeError);
+      assert.throws(() => classifyAddress(value, version), TypeError);
+    }
+    assert.throws(() => parsePrefix("/", version), { code: "invalid_prefix", version });
+    assert.throws(() => parsePrefix("//1", version), { code: "invalid_prefix", version });
+  }
+  for (const version of [null, undefined, "4", 0, 5, NaN]) {
+    assert.throws(() => parseAddress("0.0.0.0", version), { code: "invalid_version" });
+    assert.throws(() => formatAddress(0n, version), { code: "invalid_version" });
+  }
+  for (const separator of ["\n", "\r", "\r\n", "\t", " ", "\u2028", "\u2029"])
+    assert.throws(() => parseAddress(`192${separator}.0.2.1`, 4), { code: "invalid_ipv4" });
+  for (const address of [":::1", "1::2::3", "1:2:3:4:5:6::192.0.2.1", "::ffff:01.2.3.4"])
+    assert.throws(() => parseAddress(address, 6), { name: "IpError", code: "invalid_ipv6" });
+  for (const mask of ["255.0.255.0", "0.0.0.1", "255.255.255.253"])
+    assert.throws(() => parsePrefix(mask, 4), { code: "invalid_mask", version: 4 });
+  assert.throws(() => parsePrefix("255.255.255.256", 4), { code: "invalid_ipv4", version: 4 });
+});

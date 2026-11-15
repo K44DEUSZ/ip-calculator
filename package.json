@@ -1,6 +1,6 @@
 {
   "name": "@k44deusz/ip-calculator",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Obliczanie podsieci IPv4 i IPv6, formatowanie adresów oraz mapowanie IPv4 na IPv6.",
   "type": "module",
   "exports": {
@@ -34,13 +34,20 @@
     "build": "tsc",
     "check": "tsc --noEmit && eslint . && prettier --check .",
     "test": "npm run build && node --test",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "check:package": "npm run build && node scripts/check-package.mjs"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",
     "@typescript-eslint/parser": "8.71.1",
     "eslint": "9.39.5",
     "prettier": "3.9.10",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "@types/node": "20.19.43"
+  },
+  "overrides": {
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "11.0.5"
+    }
   }
 }

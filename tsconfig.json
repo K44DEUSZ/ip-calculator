@@ -10,7 +10,8 @@
     "rootDir": "src",
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "newLine": "lf"
   },
   "include": ["src/**/*.ts"]
 }
